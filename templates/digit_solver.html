@@ -1,0 +1,149 @@
+<!-- templates/digit_solver.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="mt-4">
+  <h1 class="mb-4">Digit Calculation Solver</h1>
+  <p>
+    Enter an equation using full notation (e.g., <code>(x*x*x)+x = 386</code>) or in shorthand.
+    <br>
+    Shorthand examples:
+    <br>
+    • <code>++15</code> will be interpreted as <code>x+x+x = 15</code>
+    <br>
+    • <code>(**)+386</code> will be interpreted as <code>(x*x*x)+x = 386</code>
+  </p>
+  <div class="mb-3">
+    <input type="text" id="equationInput" class="form-control" placeholder="Enter equation (e.g., (**)+386 or ++15)" />
+  </div>
+  <button id="solveButton" class="btn btn-primary">Solve</button>
+  <div id="output" class="mt-3"></div>
+</div>
+<script>
+  function getPermutations(arr, length) {
+    let results = [];
+    function permute(current, remaining) {
+      if (current.length === length) {
+        results.push(current);
+        return;
+      }
+      for (let i = 0; i < remaining.length; i++) {
+        let newCurrent = current.concat(remaining[i]);
+        let newRemaining = remaining.slice(0, i).concat(remaining.slice(i + 1));
+        permute(newCurrent, newRemaining);
+      }
+    }
+    permute([], arr);
+    return results;
+  }
+  function solveEquation(expression, target, maxSolutions = 3) {
+    let lhs = expression.trim();
+    if (!lhs) {
+      return { error: "Empty expression. Please enter a valid expression." };
+    }
+    let targetVal;
+    try {
+      targetVal = eval(target);
+    } catch (e) {
+      return { error: "Invalid target value. Please enter a valid number." };
+    }
+    let countX = (lhs.match(/x/g) || []).length;
+    if (countX === 0) {
+      return { error: "No placeholders 'x' found in the expression." };
+    }
+    let digits = [1,2,3,4,5,6,7,8,9];
+    let perms = getPermutations(digits, countX);
+    let solutions = [];
+    for (let perm of perms) {
+      let expr = lhs;
+      for (let digit of perm) {
+        expr = expr.replace('x', digit);
+      }
+      try {
+        if (eval(expr) === targetVal) {
+          solutions.push(perm);
+          if (solutions.length >= maxSolutions) break;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    return { solutions: solutions, target: targetVal };
+  }
+  function parseInput(inputStr) {
+    inputStr = inputStr.trim();
+    if (inputStr.includes("=")) {
+      let parts = inputStr.split("=");
+      if (parts.length !== 2) {
+        return { error: "Invalid equation format. Use 'expression = value'." };
+      }
+      return { expression: parts[0].trim(), target: parts[1].trim() };
+    } else {
+      let parenRegex = /^(\(([+\-\*\/]+)\))([+\-\*\/])(\d+)$/;
+      let match = inputStr.match(parenRegex);
+      if (match) {
+        let innerOps = match[2];
+        let outOp = match[3];
+        let target = match[4];
+        let innerExpr = "x";
+        for (let op of innerOps) {
+          innerExpr += op + "x";
+        }
+        let expression = "(" + innerExpr + ")" + outOp + "x";
+        return { expression: expression, target: target };
+      }
+      let generalRegex = /^([^0-9]+)(\d+)$/;
+      match = inputStr.match(generalRegex);
+      if (match) {
+        let ops = match[1];
+        let target = match[2];
+        let expr = "x";
+        for (let op of ops) {
+          expr += op + "x";
+        }
+        return { expression: expr, target: target };
+      }
+      return { error: "Invalid shorthand format. Use patterns like (++15) or (**)+386." };
+    }
+  }
+  function clearAll() {
+    document.getElementById("equationInput").value = "";
+    document.getElementById("output").innerHTML = "";
+    document.getElementById("equationInput").focus();
+  }
+  document.getElementById("solveButton").addEventListener("click", function() {
+    let inputStr = document.getElementById("equationInput").value;
+    let outputDiv = document.getElementById("output");
+    outputDiv.innerHTML = "";
+    let parsed = parseInput(inputStr);
+    if (parsed.error) {
+       outputDiv.innerHTML = "<p class='text-danger'>" + parsed.error + "</p>";
+       return;
+    }
+    let result = solveEquation(parsed.expression, parsed.target);
+    if (result.error) {
+       outputDiv.innerHTML = "<p class='text-danger'>" + result.error + "</p>";
+    } else if (result.solutions.length === 0) {
+       outputDiv.innerHTML = "<p>No solutions found.</p>";
+    } else {
+       let html = "<p>Solutions (each array represents the digits assigned to 'x' in order):</p>";
+       for (let sol of result.solutions) {
+         html += "<div class='mb-2 border p-2'>" + JSON.stringify(sol) + "</div>";
+       }
+       html += "<p>Ready for next question.</p>";
+       outputDiv.innerHTML = html;
+    }
+  });
+  document.getElementById("equationInput").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      document.getElementById("solveButton").click();
+    } else if (event.key === "Escape") {
+      clearAll();
+    }
+  });
+  document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+      clearAll();
+    }
+  });
+</script>
+{% endblock %}

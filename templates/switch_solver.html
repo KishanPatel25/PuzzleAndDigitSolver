@@ -1,0 +1,82 @@
+<!-- templates/switch_solver.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="mt-4">
+  <h1 class="mb-4">Switch Puzzle Solver</h1>
+  <p>Enter a puzzle formula:</p>
+  <ul>
+    <li><strong>Single unknown (x):</strong> <code>GYRB+2314+x+2134=BRYG</code></li>
+    <li><strong>Double unknown (x1, x2):</strong> <code>BGRY+x1+x2=RBGY</code></li>
+  </ul>
+  <form method="POST" action="{{ url_for('switch_solver') }}" class="mb-3">
+    <div class="mb-3">
+      <label for="formula" class="form-label">Formula:</label>
+      <input type="text" class="form-control" id="formula" name="formula" value="{{ formula|default('') }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Solve</button>
+    {% if puzzle_data_json %}
+      <input type="hidden" name="puzzle_data_json" value="{{ puzzle_data_json }}">
+    {% endif %}
+  </form>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+  {% if result %}
+    <div class="alert alert-success">{{ result }}</div>
+  {% endif %}
+  {% if best_x1 and best_x2 %}
+    <div class="alert alert-info">
+      <p><strong>Best Candidate:</strong> x1 = {{ best_x1 }}, x2 = {{ best_x2 }}</p>
+    </div>
+    <!-- Filter box appears only for double puzzles -->
+    <div class="card mb-3">
+      <div class="card-header">Filter by x1</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('switch_solver') }}">
+          <input type="hidden" name="formula" value="{{ formula }}">
+          <input type="hidden" name="puzzle_data_json" value="{{ puzzle_data_json }}">
+          <div class="mb-3">
+            <label for="filter_x1" class="form-label">Enter x1 (e.g. 2413):</label>
+            <input type="text" class="form-control" name="filter_x1" id="filter_x1" value="{{ filter_x1 }}">
+          </div>
+          <button type="submit" name="filter_submit" class="btn btn-secondary">Filter</button>
+        </form>
+      </div>
+    </div>
+    {% if filtered_pairs %}
+      <div class="alert alert-warning">
+        <p>Filtered pairs for x1 = <strong>{{ filter_x1 }}</strong>:</p>
+        <ul>
+          {% for fpair in filtered_pairs %}
+            <li>x1 = {{ fpair[0] }}, x2 = {{ fpair[1] }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+    <div class="card">
+      <div class="card-header">All valid pairs:</div>
+      <ul class="list-group list-group-flush">
+        {% for pair in candidates %}
+          <li class="list-group-item">x1 = {{ pair[0] }}, x2 = {{ pair[1] }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+</div>
+<script>
+  // When ESC is pressed, clear inputs and focus on the formula box.
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      var formulaInput = document.getElementById("formula");
+      if(formulaInput){
+        formulaInput.value = "";
+        formulaInput.focus();
+      }
+      var filterInput = document.getElementById("filter_x1");
+      if(filterInput) {
+        filterInput.value = "";
+      }
+    }
+  });
+</script>
+{% endblock %}
